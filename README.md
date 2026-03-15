@@ -1,36 +1,38 @@
 # SchemaWatch
 
-SchemaWatch is a developer tool that detects breaking API schema changes before they reach production.
+Detect breaking API changes automatically.
 
-## Current MVP Scope
+SchemaWatch compares two OpenAPI schemas and detects breaking API changes before they reach production.
 
-This first version can detect:
+It can run locally, in CI/CD pipelines, or inside GitHub Actions.
 
-- removed endpoints
-- removed HTTP methods
-- removed response fields
-- changed field types
-- fields that became required
+---
 
-## Tech Stack
+# Features
 
-- Python
-- PyYAML
-- pytest
+SchemaWatch detects:
 
-## Project Structure
+- Removed endpoints
+- Removed response fields
+- Field type changes
+- Fields that became required
 
-```text
-schemawatch/
-├─ schemawatch/
-│  ├─ __init__.py
-│  ├─ cli.py
-│  ├─ parser.py
-│  ├─ diff_engine.py
-│  └─ rules.py
-├─ examples/
-│  ├─ old.yaml
-│  └─ new.yaml
-├─ tests/
-│  └─ test_diff_engine.py
-└─ requirements.txt
+This helps teams prevent breaking API changes from being merged.
+
+---
+
+# Example
+
+Run schema comparison:
+
+```bash
+python -m schemawatch.cli examples/old.yaml examples/new.yaml
+
+Outpot:
+
+⚠ Breaking API changes detected:
+
+- Method removed: GET /users
+- Response field removed: User.email
+- Field type changed: User.id integer -> string
+- Field became required: User.id
