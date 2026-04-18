@@ -1,0 +1,33 @@
+{
+  "breaking_changes_detected": true,
+  "summary": {
+    "total_changes": 4,
+    "breaking_changes": 4
+  },
+  "files": {
+    "old_schema": "examples/old.yaml",
+    "new_schema": "examples/new.yaml"
+  },
+  "changes": [
+    {
+      "code": "method_removed",
+      "level": "breaking",
+      "message": "Method removed: GET /users"
+    },
+    {
+      "code": "field_removed",
+      "level": "breaking",
+      "message": "Response field removed: User.email"
+    },
+    {
+      "code": "field_type_changed",
+      "level": "breaking",
+      "message": "Field type changed: User.id integer -> string"
+    },
+    {
+      "code": "field_became_required",
+      "level": "breaking",
+      "message": "Field became required: User.id"
+    }
+  ]
+}

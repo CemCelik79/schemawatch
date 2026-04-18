@@ -101,13 +101,20 @@ def extract_required_fields(
 
 
 def field_type_repr(openapi_schema: Dict[str, Any], field_schema: Dict[str, Any]) -> str:
-    field_schema = resolve_schema_ref(openapi_schema, field_schema)
+    if not isinstance(field_schema, dict):
+        return "unknown"
 
-    if "$ref" in field_schema:
+    # Önce ref'i koru
+    if "$ref" in field_schema and isinstance(field_schema["$ref"], str):
         return field_schema["$ref"]
 
     schema_type = field_schema.get("type")
     schema_format = field_schema.get("format")
+
+    if schema_type == "array":
+        items = field_schema.get("items", {})
+        item_repr = field_type_repr(openapi_schema, items) if isinstance(items, dict) else "unknown"
+        return f"array[{item_repr}]"
 
     if schema_type and schema_format:
         return f"{schema_type}:{schema_format}"

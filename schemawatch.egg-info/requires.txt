@@ -1,4 +1,4 @@
-pyyaml
-fastapi
-uvicorn
-sqlalchemy
+PyYAML>=6.0
+
+[dev]
+pytest>=8.0

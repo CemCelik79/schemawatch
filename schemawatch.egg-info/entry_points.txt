@@ -1,2 +1,0 @@
-[console_scripts]
-schemawatch = schemawatch.cli:main

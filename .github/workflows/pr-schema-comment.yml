@@ -1,0 +1,110 @@
+name: PR Schema Comment
+
+on:
+  pull_request:
+    paths:
+      - "schemawatch/**"
+      - "tests/**"
+      - "examples/**"
+      - "openapi.yaml"
+      - "openapi_old.yaml"
+      - "pyproject.toml"
+      - "requirements.txt"
+
+jobs:
+  schema-comment:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Run schema diff and save JSON
+        id: schemawatch
+        run: |
+          python -m schemawatch.cli openapi_old.yaml openapi.yaml --format json --output schemawatch-result.json --quiet
+        continue-on-error: true
+
+      - name: Build PR comment body
+        id: build_comment
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result_path = Path("schemawatch-result.json")
+
+          if not result_path.exists():
+              body = """## SchemaWatch Report
+
+          ⚠ SchemaWatch could not generate a result file.
+          """
+              Path("pr_comment.md").write_text(body, encoding="utf-8")
+              raise SystemExit(0)
+
+          data = json.loads(result_path.read_text(encoding="utf-8"))
+          changes = data.get("changes", [])
+          total = data.get("summary", {}).get("total_changes", 0)
+          old_schema = data.get("files", {}).get("old_schema", "unknown")
+          new_schema = data.get("files", {}).get("new_schema", "unknown")
+
+          if changes:
+              lines = [
+                  "## SchemaWatch Report",
+                  "",
+                  "⚠ Breaking API changes detected.",
+                  "",
+                  f"- Compared: `{old_schema}` → `{new_schema}`",
+                  f"- Total breaking changes: **{total}**",
+                  "",
+                  "### Detected changes",
+                  "",
+              ]
+              for change in changes:
+                  lines.append(f"- {change['message']}")
+          else:
+              lines = [
+                  "## SchemaWatch Report",
+                  "",
+                  "✅ No breaking API changes detected.",
+                  "",
+                  f"- Compared: `{old_schema}` → `{new_schema}`",
+                  f"- Total breaking changes: **0**",
+              ]
+
+          Path("pr_comment.md").write_text("\n".join(lines), encoding="utf-8")
+          PY
+
+      - name: Find existing SchemaWatch comment
+        id: find_comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: "## SchemaWatch Report"
+
+      - name: Create or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          edit-mode: replace
+          body-path: pr_comment.md
