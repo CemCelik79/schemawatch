@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: schemawatch
+Version: 0.1.0
+Summary: Detect breaking OpenAPI changes automatically
+Author: Cem Çelik
+Requires-Dist: pyyaml
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Requires-Dist: sqlalchemy
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: summary

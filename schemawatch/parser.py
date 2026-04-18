@@ -3,7 +3,6 @@ import yaml
 
 
 def load_openapi_file(file_path: str):
-
     path = Path(file_path)
 
     if not path.exists():
@@ -11,6 +10,9 @@ def load_openapi_file(file_path: str):
 
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
+
+    if not isinstance(data, dict):
+        raise ValueError("Dosya boş veya geçerli YAML değil")
 
     if "openapi" not in data:
         raise ValueError("Bu dosya OpenAPI formatında değil")

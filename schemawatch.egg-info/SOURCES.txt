@@ -1,0 +1,14 @@
+README.md
+setup.py
+schemawatch/__init__.py
+schemawatch/cli.py
+schemawatch/diff_engine.py
+schemawatch/parser.py
+schemawatch/rules.py
+schemawatch.egg-info/PKG-INFO
+schemawatch.egg-info/SOURCES.txt
+schemawatch.egg-info/dependency_links.txt
+schemawatch.egg-info/entry_points.txt
+schemawatch.egg-info/requires.txt
+schemawatch.egg-info/top_level.txt
+tests/test_diff_engine.py

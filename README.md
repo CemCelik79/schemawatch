@@ -26,8 +26,8 @@ This helps teams prevent breaking API changes from being merged.
 Run schema comparison:
 
 bash
-python -m schemawatch.cli examples/old.yaml examples/new.yaml
 
+python -m schemawatch.cli openapi_old.yaml openapi.yaml
 Output:
 
 ⚠ Breaking API changes detected:
