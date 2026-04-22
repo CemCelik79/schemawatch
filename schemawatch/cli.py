@@ -43,7 +43,10 @@ def check(old_schema_path: str, new_schema_path: str):
 
 def print_usage():
     print("Usage:")
-    print("python -m schemawatch.cli <old_schema.yaml> <new_schema.yaml> [--format text|json] [--output result.json] [--quiet]")
+    print(
+        "python -m schemawatch.cli <old_schema.yaml> <new_schema.yaml> "
+        "[--format text|json] [--output result.json] [--quiet]"
+    )
 
 
 def main():
@@ -98,10 +101,11 @@ def main():
     if output_format == "json":
         content = json.dumps(result, indent=2, ensure_ascii=False)
     else:
-        if changes:
-            content = format_text_output(changes)
-        else:
-            content = "✅ No breaking changes detected"
+        content = (
+            format_text_output(changes)
+            if changes
+            else "✅ No breaking changes detected"
+        )
 
     if output_file:
         write_output_file(output_file, content)

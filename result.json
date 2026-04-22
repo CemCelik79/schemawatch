@@ -1,14 +1,19 @@
 {
   "breaking_changes_detected": true,
   "summary": {
-    "total_changes": 4,
-    "breaking_changes": 4
+    "total_changes": 5,
+    "breaking_changes": 5
   },
   "files": {
     "old_schema": "examples/old.yaml",
     "new_schema": "examples/new.yaml"
   },
   "changes": [
+    {
+      "code": "endpoint_removed",
+      "level": "breaking",
+      "message": "Endpoint removed: /orders"
+    },
     {
       "code": "method_removed",
       "level": "breaking",
