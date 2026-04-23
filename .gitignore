@@ -1,4 +1,7 @@
-.venv
-__pycache__
+.venv/
+.pytest_cache/
+__pycache__/
 *.pyc
-schemawatch.db
+*.egg-info/
+dist/
+build/
