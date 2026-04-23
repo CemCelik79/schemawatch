@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=68", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,14 +8,35 @@ version = "0.1.0"
 description = "Detect breaking API changes between OpenAPI schemas"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  {name = "Cem Celik"}
+]
+keywords = ["openapi", "api", "schema", "breaking-change", "cli", "ci-cd"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Testing",
+  "Topic :: Software Development :: Libraries :: Python Modules"
+]
 dependencies = [
   "PyYAML>=6.0"
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.0"
+  "pytest>=8.0",
+  "build>=1.2.1",
+  "twine>=5.1.1"
 ]
+
+[project.scripts]
+schemawatch = "schemawatch.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

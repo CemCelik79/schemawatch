@@ -28,3 +28,7 @@ Clone the repository:
 ```bash
 git clone https://github.com/CemCelik79/schemawatch.git
 cd schemawatch
+## Install from PyPI
+
+```bash
+pip install schemawatch

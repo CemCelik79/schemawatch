@@ -1,255 +1,145 @@
-from __future__ import annotations
-
-from typing import Any, Dict, List, Set, Tuple
+from typing import Dict, Any, List
 
 
-HTTP_METHODS = {"get", "post", "put", "delete", "patch", "options", "head", "trace"}
-
-
-def make_change(code: str, level: str, message: str) -> Dict[str, str]:
+def make_change(message: str):
     return {
-        "code": code,
-        "level": level,
+        "level": "breaking",
         "message": message,
     }
 
 
-def extract_path_methods(schema: Dict[str, Any]) -> Dict[str, Set[str]]:
-    paths = schema.get("paths", {})
-    result: Dict[str, Set[str]] = {}
-
-    if not isinstance(paths, dict):
-        return result
-
-    for path, path_item in paths.items():
-        if not isinstance(path_item, dict):
-            continue
-
-        methods = {
-            method_name.upper()
-            for method_name in path_item.keys()
-            if isinstance(method_name, str) and method_name.lower() in HTTP_METHODS
-        }
-
-        result[path] = methods
-
-    return result
+def get_schemas(schema: Dict[str, Any]):
+    return schema.get("components", {}).get("schemas", {})
 
 
-def get_component_schemas(schema: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    components = schema.get("components", {})
-    if not isinstance(components, dict):
-        return {}
+def compare_properties(schema_name, old_props, new_props, path=""):
+    changes = []
 
-    schemas = components.get("schemas", {})
-    if not isinstance(schemas, dict):
-        return {}
+    old_fields = set(old_props.keys())
+    new_fields = set(new_props.keys())
 
-    return {name: value for name, value in schemas.items() if isinstance(value, dict)}
-
-
-def resolve_schema_ref(
-    openapi_schema: Dict[str, Any],
-    schema_or_ref: Dict[str, Any],
-) -> Dict[str, Any]:
-    """
-    Supports local refs like:
-    #/components/schemas/User
-    """
-    if not isinstance(schema_or_ref, dict):
-        return {}
-
-    ref = schema_or_ref.get("$ref")
-    if not ref:
-        return schema_or_ref
-
-    if not isinstance(ref, str):
-        return {}
-
-    prefix = "#/components/schemas/"
-    if not ref.startswith(prefix):
-        return {}
-
-    schema_name = ref[len(prefix):]
-    return get_component_schemas(openapi_schema).get(schema_name, {})
-
-
-def extract_object_properties(
-    openapi_schema: Dict[str, Any],
-    schema_def: Dict[str, Any],
-) -> Dict[str, Dict[str, Any]]:
-    schema_def = resolve_schema_ref(openapi_schema, schema_def)
-
-    properties = schema_def.get("properties", {})
-    if not isinstance(properties, dict):
-        return {}
-
-    return {name: value for name, value in properties.items() if isinstance(value, dict)}
-
-
-def extract_required_fields(
-    openapi_schema: Dict[str, Any],
-    schema_def: Dict[str, Any],
-) -> Set[str]:
-    schema_def = resolve_schema_ref(openapi_schema, schema_def)
-
-    required = schema_def.get("required", [])
-    if not isinstance(required, list):
-        return set()
-
-    return {item for item in required if isinstance(item, str)}
-
-
-def field_type_repr(openapi_schema: Dict[str, Any], field_schema: Dict[str, Any]) -> str:
-    if not isinstance(field_schema, dict):
-        return "unknown"
-
-    # Önce ref'i koru
-    if "$ref" in field_schema and isinstance(field_schema["$ref"], str):
-        return field_schema["$ref"]
-
-    schema_type = field_schema.get("type")
-    schema_format = field_schema.get("format")
-
-    if schema_type == "array":
-        items = field_schema.get("items", {})
-        item_repr = field_type_repr(openapi_schema, items) if isinstance(items, dict) else "unknown"
-        return f"array[{item_repr}]"
-
-    if schema_type and schema_format:
-        return f"{schema_type}:{schema_format}"
-
-    if schema_type:
-        return str(schema_type)
-
-    if "oneOf" in field_schema:
-        return "oneOf"
-
-    if "anyOf" in field_schema:
-        return "anyOf"
-
-    if "allOf" in field_schema:
-        return "allOf"
-
-    return "unknown"
-
-
-def compare_paths(old_schema: Dict[str, Any], new_schema: Dict[str, Any]) -> List[Dict[str, str]]:
-    changes: List[Dict[str, str]] = []
-
-    old_path_methods = extract_path_methods(old_schema)
-    new_path_methods = extract_path_methods(new_schema)
-
-    old_paths = set(old_path_methods.keys())
-    new_paths = set(new_path_methods.keys())
-
-    removed_paths = old_paths - new_paths
-    for path in sorted(removed_paths):
+    # Removed fields
+    for field in old_fields - new_fields:
         changes.append(
-            make_change(
-                "endpoint_removed",
-                "breaking",
-                f"Endpoint removed: {path}",
-            )
+            make_change(f"Response field removed: {schema_name}.{path}{field}")
         )
 
-    common_paths = old_paths & new_paths
-    for path in sorted(common_paths):
-        old_methods = old_path_methods[path]
-        new_methods = new_path_methods[path]
+    # Common fields
+    for field in old_fields & new_fields:
+        old_field = old_props[field]
+        new_field = new_props[field]
 
-        removed_methods = old_methods - new_methods
-        for method in sorted(removed_methods):
+        full_path = f"{path}{field}"
+
+        old_type = get_type_repr(old_field)
+        new_type = get_type_repr(new_field)
+
+        if old_type != new_type:
             changes.append(
                 make_change(
-                    "method_removed",
-                    "breaking",
-                    f"Method removed: {method} {path}",
+                    f"Field type changed: {schema_name}.{full_path} {old_type} -> {new_type}"
                 )
             )
 
-    return changes
+        # Recursive check for nested object
+        if old_field.get("type") == "object" and new_field.get("type") == "object":
+            old_nested = old_field.get("properties", {})
+            new_nested = new_field.get("properties", {})
 
-
-def compare_component_schemas(
-    old_schema: Dict[str, Any],
-    new_schema: Dict[str, Any],
-) -> List[Dict[str, str]]:
-    changes: List[Dict[str, str]] = []
-
-    old_schemas = get_component_schemas(old_schema)
-    new_schemas = get_component_schemas(new_schema)
-
-    old_schema_names = set(old_schemas.keys())
-    new_schema_names = set(new_schemas.keys())
-
-    removed_schema_names = old_schema_names - new_schema_names
-    for schema_name in sorted(removed_schema_names):
-        changes.append(
-            make_change(
-                "schema_removed",
-                "breaking",
-                f"Schema removed: {schema_name}",
-            )
-        )
-
-    common_schema_names = old_schema_names & new_schema_names
-
-    for schema_name in sorted(common_schema_names):
-        old_def = old_schemas[schema_name]
-        new_def = new_schemas[schema_name]
-
-        old_props = extract_object_properties(old_schema, old_def)
-        new_props = extract_object_properties(new_schema, new_def)
-
-        old_fields = set(old_props.keys())
-        new_fields = set(new_props.keys())
-
-        removed_fields = old_fields - new_fields
-        for field in sorted(removed_fields):
-            changes.append(
-                make_change(
-                    "field_removed",
-                    "breaking",
-                    f"Response field removed: {schema_name}.{field}",
-                )
+            changes.extend(
+                compare_properties(schema_name, old_nested, new_nested, path=f"{full_path}.")
             )
 
-        common_fields = old_fields & new_fields
-        for field in sorted(common_fields):
-            old_type = field_type_repr(old_schema, old_props[field])
-            new_type = field_type_repr(new_schema, new_props[field])
+        # Array item comparison
+        if old_field.get("type") == "array" and new_field.get("type") == "array":
+            old_items = old_field.get("items", {})
+            new_items = new_field.get("items", {})
 
-            if old_type != new_type:
+            if get_type_repr(old_items) != get_type_repr(new_items):
                 changes.append(
                     make_change(
-                        "field_type_changed",
-                        "breaking",
-                        f"Field type changed: {schema_name}.{field} {old_type} -> {new_type}",
+                        f"Field type changed: {schema_name}.{full_path} array[{get_type_repr(old_items)}] -> array[{get_type_repr(new_items)}]"
                     )
                 )
 
-        old_required = extract_required_fields(old_schema, old_def)
-        new_required = extract_required_fields(new_schema, new_def)
-
-        newly_required = new_required - old_required
-        for field in sorted(newly_required):
-            changes.append(
-                make_change(
-                    "field_became_required",
-                    "breaking",
-                    f"Field became required: {schema_name}.{field}",
+        # Enum comparison
+        if "enum" in old_field and "enum" in new_field:
+            if set(old_field["enum"]) != set(new_field["enum"]):
+                changes.append(
+                    make_change(
+                        f"Enum changed: {schema_name}.{full_path} {old_field['enum']} -> {new_field['enum']}"
+                    )
                 )
-            )
 
     return changes
 
 
-def detect_breaking_changes(
-    old_schema: Dict[str, Any],
-    new_schema: Dict[str, Any],
-) -> List[Dict[str, str]]:
-    changes: List[Dict[str, str]] = []
+def get_type_repr(field):
+    if "$ref" in field:
+        return field["$ref"]
+
+    if field.get("type") == "array":
+        items = field.get("items", {})
+        return f"array[{get_type_repr(items)}]"
+
+    return field.get("type", "unknown")
+
+
+def compare_schemas(old_schema, new_schema):
+    changes = []
+
+    old_schemas = get_schemas(old_schema)
+    new_schemas = get_schemas(new_schema)
+
+    old_names = set(old_schemas.keys())
+    new_names = set(new_schemas.keys())
+
+    # Removed schemas
+    for name in old_names - new_names:
+        changes.append(make_change(f"Schema removed: {name}"))
+
+    # Compare common schemas
+    for name in old_names & new_names:
+        old_props = old_schemas[name].get("properties", {})
+        new_props = new_schemas[name].get("properties", {})
+
+        changes.extend(compare_properties(name, old_props, new_props))
+
+        # Required fields
+        old_req = set(old_schemas[name].get("required", []))
+        new_req = set(new_schemas[name].get("required", []))
+
+        for field in new_req - old_req:
+            changes.append(make_change(f"Field became required: {name}.{field}"))
+
+    return changes
+
+
+def compare_paths(old_schema, new_schema):
+    changes = []
+
+    old_paths = old_schema.get("paths", {})
+    new_paths = new_schema.get("paths", {})
+
+    # Removed endpoints
+    for path in set(old_paths) - set(new_paths):
+        changes.append(make_change(f"Endpoint removed: {path}"))
+
+    # Method comparison
+    for path in set(old_paths) & set(new_paths):
+        old_methods = set(old_paths[path].keys())
+        new_methods = set(new_paths[path].keys())
+
+        for method in old_methods - new_methods:
+            changes.append(make_change(f"Method removed: {method.upper()} {path}"))
+
+    return changes
+
+
+def detect_breaking_changes(old_schema, new_schema):
+    changes = []
+
     changes.extend(compare_paths(old_schema, new_schema))
-    changes.extend(compare_component_schemas(old_schema, new_schema))
+    changes.extend(compare_schemas(old_schema, new_schema))
+
     return changes
