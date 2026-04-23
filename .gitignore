@@ -1,7 +1,21 @@
-.venv/
-.pytest_cache/
+# Python
 __pycache__/
 *.pyc
+
+# Virtual env
+.venv/
+
+# Pytest
+.pytest_cache/
+
+# Packaging
 *.egg-info/
 dist/
 build/
+
+# Local DB
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
