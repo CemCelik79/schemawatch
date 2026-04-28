@@ -152,3 +152,7 @@ SchemaWatch focuses on:
 * ⚡ CI/CD integration
 
 > "Know when your API breaks — before it reaches production."
+## 🖥 Demo
+
+```bash
+python -m schemawatch.cli examples/old.yaml examples/new.yaml
