@@ -4,14 +4,80 @@ from pathlib import Path
 
 from schemawatch.diff_engine import detect_breaking_changes
 from schemawatch.parser import load_openapi_file
+from colorama import Fore, Style, init
+
+init(autoreset=True)
 
 
 def format_text_output(changes):
-    lines = ["⚠ Breaking API changes detected:\n"]
+    if not changes:
+        return (
+            f"\n{Fore.CYAN}===================================={Style.RESET_ALL}\n"
+            f"{Fore.CYAN}🚨 SchemaWatch Report{Style.RESET_ALL}\n"
+            f"{Fore.CYAN}===================================={Style.RESET_ALL}\n\n"
+            f"{Fore.GREEN}✅ No breaking changes detected{Style.RESET_ALL}\n\n"
+            f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}\n"
+            f"{Fore.YELLOW}Summary:{Style.RESET_ALL}\n"
+            f"- Total changes: 0\n"
+            f"- Breaking changes: 0\n"
+            f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}\n"
+        )
+
+    lines = [
+        f"{Fore.CYAN}===================================={Style.RESET_ALL}",
+        f"{Fore.CYAN}🚨 SchemaWatch Report{Style.RESET_ALL}",
+        f"{Fore.CYAN}===================================={Style.RESET_ALL}",
+        "",
+        f"{Fore.RED}🚨 Breaking changes detected: {len(changes)}{Style.RESET_ALL}",
+        "",
+    ]
+
+    for change in changes:
+        lines.append(f"{Fore.RED}- {change['message']}{Style.RESET_ALL}")
+
+    lines.extend(
+        [
+            "",
+            f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}",
+            f"{Fore.YELLOW}Summary:{Style.RESET_ALL}",
+            f"- Total changes: {len(changes)}",
+            f"- Breaking changes: {len(changes)}",
+            f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}",
+        ]
+    )
+
+    return "\n".join(lines)
+def format_markdown_output(changes):
+    if not changes:
+        return (
+            "# 🚨 SchemaWatch Report\n\n"
+            "## ✅ No breaking changes detected\n\n"
+            "## Summary\n\n"
+            "- Total changes: 0\n"
+            "- Breaking changes: 0\n"
+        )
+
+    lines = [
+        "# 🚨 SchemaWatch Report",
+        "",
+        f"## ⚠ Breaking changes detected: {len(changes)}",
+        "",
+    ]
+
     for change in changes:
         lines.append(f"- {change['message']}")
-    return "\n".join(lines)
 
+    lines.extend(
+        [
+            "",
+            "## Summary",
+            "",
+            f"- Total changes: {len(changes)}",
+            f"- Breaking changes: {len(changes)}",
+        ]
+    )
+
+    return "\n".join(lines)
 
 def build_result(old_schema_path, new_schema_path, changes):
     return {
@@ -72,7 +138,7 @@ def main():
                 print("Error: --format requires a value (text or json)")
                 sys.exit(1)
             output_format = args[i + 1].lower()
-            if output_format not in {"text", "json"}:
+            if output_format not in {"text", "json","markdown"}:
                 print("Error: --format must be 'text' or 'json'")
                 sys.exit(1)
             i += 2
@@ -100,6 +166,8 @@ def main():
 
     if output_format == "json":
         content = json.dumps(result, indent=2, ensure_ascii=False)
+    elif output_format == "markdown":
+        content = format_markdown_output(changes)
     else:
         content = (
             format_text_output(changes)
