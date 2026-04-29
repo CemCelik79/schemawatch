@@ -34,7 +34,7 @@ def format_text_output(changes):
 
     for change in changes:
         lines.append(f"{Fore.RED}- {change['message']}{Style.RESET_ALL}")
-
+    lines.append("---")
     lines.extend(
         [
             "",
@@ -100,8 +100,12 @@ def write_output_file(output_path, content):
 
 
 def check(old_schema_path: str, new_schema_path: str):
-    old_schema = load_openapi_file(old_schema_path)
-    new_schema = load_openapi_file(new_schema_path)
+    try:
+        old_schema = load_openapi_file(old_schema_path)
+        new_schema = load_openapi_file(new_schema_path)
+    except Exception as e:
+        print(f"❌ Error loading schema: {e}")
+        sys.exit(1)
 
     changes = detect_breaking_changes(old_schema, new_schema)
     return changes
