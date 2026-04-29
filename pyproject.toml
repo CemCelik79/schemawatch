@@ -25,7 +25,8 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 dependencies = [
-  "PyYAML>=6.0"
+  "PyYAML>=6.0",
+  "colorama>=0.4.6"
 ]
 
 [project.optional-dependencies]
