@@ -3,15 +3,7 @@ name: Schema Diff Check
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "schemawatch/**"
-      - "tests/**"
-      - "examples/**"
-      - "openapi.yaml"
-      - "openapi_old.yaml"
-      - "pyproject.toml"
-      - "requirements.txt"
+  
 
 jobs:
   schema-diff:
