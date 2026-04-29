@@ -156,3 +156,5 @@ SchemaWatch focuses on:
 
 ```bash
 python -m schemawatch.cli examples/old.yaml examples/new.yaml
+
+<!-- test PR -->
