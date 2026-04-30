@@ -1,10 +1,10 @@
 # SchemaWatch
-
+> Detect breaking API changes before they reach production.
 ![PyPI](https://img.shields.io/pypi/v/schemawatch)
 ![CI](https://github.com/CemCelik79/schemawatch/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/pypi/pyversions/schemawatch)
 ![License](https://img.shields.io/github/license/CemCelik79/schemawatch)
-
+![Stars](https://img.shields.io/github/stars/CemCelik79/schemawatch?style=social)
 Detect breaking API changes automatically.
 
 SchemaWatch compares two OpenAPI schemas and identifies breaking API changes before they reach production.
@@ -153,8 +153,22 @@ SchemaWatch focuses on:
 
 > "Know when your API breaks — before it reaches production."
 ## 🖥 Demo
-
+![SchemaWatch Demo](docs/demo.gif)
 ```bash
 python -m schemawatch.cli examples/old.yaml examples/new.yaml
 
 <!-- test PR -->
+## 🤔 Why SchemaWatch?
+
+There are great tools like `oasdiff` and `openapi-diff`.  
+SchemaWatch focuses on simplicity and CI-first workflows.
+
+| Feature | SchemaWatch | oasdiff / openapi-diff |
+|--------|-------------|------------------------|
+| Easy CLI | ✅ Very simple | ⚠️ More complex |
+| CI/CD friendly | ✅ Built-in mindset | ⚠️ Needs config |
+| PR comments | ✅ Yes | ❌ Not built-in |
+| Output | ✅ Clean & readable | ⚠️ Verbose |
+| Setup time | ⚡ 10 seconds | ⏱️ Longer |
+
+👉 SchemaWatch = **quick setup + practical usage**
