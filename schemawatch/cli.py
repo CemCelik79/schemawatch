@@ -8,6 +8,18 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)
 
+SEVERITY_ICON = {
+    "critical": "🔴",
+    "warning": "🟡",
+    "info": "🔵",
+}
+
+SEVERITY_COLOR = {
+    "critical": Fore.RED,
+    "warning": Fore.YELLOW,
+    "info": Fore.CYAN,
+}
+
 
 def format_text_output(changes):
     if not changes:
@@ -23,30 +35,41 @@ def format_text_output(changes):
             f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}\n"
         )
 
+    critical = [c for c in changes if c.get("severity") == "critical"]
+    warnings = [c for c in changes if c.get("severity") == "warning"]
+    infos = [c for c in changes if c.get("severity") == "info"]
+
     lines = [
         f"{Fore.CYAN}===================================={Style.RESET_ALL}",
         f"{Fore.CYAN}🚨 SchemaWatch Report{Style.RESET_ALL}",
         f"{Fore.CYAN}===================================={Style.RESET_ALL}",
         "",
-        f"{Fore.RED}🚨 Breaking changes detected: {len(changes)}{Style.RESET_ALL}",
+        f"{Fore.RED}Breaking changes detected: {len(changes)}{Style.RESET_ALL}",
         "",
     ]
 
-    for change in changes:
-        lines.append(f"{Fore.RED}- {change['message']}{Style.RESET_ALL}")
-    lines.append("---")
-    lines.extend(
-        [
-            "",
-            f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}",
-            f"{Fore.YELLOW}Summary:{Style.RESET_ALL}",
-            f"- Total changes: {len(changes)}",
-            f"- Breaking changes: {len(changes)}",
-            f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}",
-        ]
-    )
+    for group, label in [(critical, "CRITICAL"), (warnings, "WARNING"), (infos, "INFO")]:
+        if group:
+            color = SEVERITY_COLOR.get(label.lower(), Fore.WHITE)
+            icon = SEVERITY_ICON.get(label.lower(), "•")
+            lines.append(f"{color}── {label} ({len(group)}){Style.RESET_ALL}")
+            for c in group:
+                lines.append(f"{color}  {icon} {c['message']}{Style.RESET_ALL}")
+            lines.append("")
+
+    lines.extend([
+        f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}",
+        f"{Fore.YELLOW}Summary:{Style.RESET_ALL}",
+        f"- Total changes: {len(changes)}",
+        f"- Critical: {len(critical)}",
+        f"- Warning:  {len(warnings)}",
+        f"- Info:     {len(infos)}",
+        f"{Fore.YELLOW}------------------------------------{Style.RESET_ALL}",
+    ])
 
     return "\n".join(lines)
+
+
 def format_markdown_output(changes):
     if not changes:
         return (
@@ -54,37 +77,55 @@ def format_markdown_output(changes):
             "## ✅ No breaking changes detected\n\n"
             "## Summary\n\n"
             "- Total changes: 0\n"
-            "- Breaking changes: 0\n"
         )
+
+    critical = [c for c in changes if c.get("severity") == "critical"]
+    warnings = [c for c in changes if c.get("severity") == "warning"]
+    infos = [c for c in changes if c.get("severity") == "info"]
 
     lines = [
         "# 🚨 SchemaWatch Report",
         "",
-        f"## ⚠ Breaking changes detected: {len(changes)}",
+        f"## Breaking changes detected: {len(changes)}",
         "",
     ]
 
-    for change in changes:
-        lines.append(f"- {change['message']}")
+    for group, label, icon in [
+        (critical, "Critical", "🔴"),
+        (warnings, "Warning", "🟡"),
+        (infos, "Info", "🔵"),
+    ]:
+        if group:
+            lines.append(f"### {icon} {label} ({len(group)})")
+            lines.append("")
+            for c in group:
+                lines.append(f"- {c['message']}")
+            lines.append("")
 
-    lines.extend(
-        [
-            "",
-            "## Summary",
-            "",
-            f"- Total changes: {len(changes)}",
-            f"- Breaking changes: {len(changes)}",
-        ]
-    )
+    lines.extend([
+        "## Summary",
+        "",
+        f"- Total changes: {len(changes)}",
+        f"- 🔴 Critical: {len(critical)}",
+        f"- 🟡 Warning: {len(warnings)}",
+        f"- 🔵 Info: {len(infos)}",
+    ])
 
     return "\n".join(lines)
 
+
 def build_result(old_schema_path, new_schema_path, changes):
+    critical = [c for c in changes if c.get("severity") == "critical"]
+    warnings = [c for c in changes if c.get("severity") == "warning"]
+    infos = [c for c in changes if c.get("severity") == "info"]
+
     return {
         "breaking_changes_detected": bool(changes),
         "summary": {
             "total_changes": len(changes),
-            "breaking_changes": len(changes),
+            "critical": len(critical),
+            "warning": len(warnings),
+            "info": len(infos),
         },
         "files": {
             "old_schema": str(old_schema_path),
@@ -114,8 +155,8 @@ def check(old_schema_path: str, new_schema_path: str):
 def print_usage():
     print("Usage:")
     print(
-        "python -m schemawatch.cli <old_schema.yaml> <new_schema.yaml> "
-        "[--format text|json] [--output result.json] [--quiet]"
+        "schemawatch <old_schema.yaml> <new_schema.yaml> "
+        "[--format text|json|markdown] [--output result.json] [--quiet]"
     )
 
 
@@ -139,11 +180,11 @@ def main():
 
         if arg == "--format":
             if i + 1 >= len(args):
-                print("Error: --format requires a value (text or json)")
+                print("Error: --format requires a value (text, json or markdown)")
                 sys.exit(1)
             output_format = args[i + 1].lower()
-            if output_format not in {"text", "json","markdown"}:
-                print("Error: --format must be 'text' or 'json'")
+            if output_format not in {"text", "json", "markdown"}:
+                print("Error: --format must be 'text', 'json' or 'markdown'")
                 sys.exit(1)
             i += 2
             continue
@@ -173,11 +214,7 @@ def main():
     elif output_format == "markdown":
         content = format_markdown_output(changes)
     else:
-        content = (
-            format_text_output(changes)
-            if changes
-            else "✅ No breaking changes detected"
-        )
+        content = format_text_output(changes)
 
     if output_file:
         write_output_file(output_file, content)
