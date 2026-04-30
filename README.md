@@ -1,6 +1,7 @@
 # SchemaWatch
 
 > Detect breaking API changes before they reach production.
+> Works with any OpenAPI file — just run one command.
 
 ![PyPI](https://img.shields.io/pypi/v/schemawatch)
 ![CI](https://github.com/CemCelik79/schemawatch/actions/workflows/ci.yml/badge.svg)
@@ -13,9 +14,9 @@
 ## 🎬 Demo
 
 ![SchemaWatch Demo](docs/demo.gif)
-
-```bash
+````bash
 python -m schemawatch.cli examples/old.yaml examples/new.yaml
+````
 
 🚀 What is SchemaWatch?
 
@@ -45,6 +46,13 @@ pip install schemawatch
 schemawatch old.yaml new.yaml
 Save to file
 schemawatch old.yaml new.yaml --format json --output result.json
+## 🧑‍💻 Real-world usage
+
+Use SchemaWatch with your own OpenAPI files:
+
+```bash
+schemawatch openapi_old.yaml openapi.yaml
+schemawatch api/v1/openapi.yaml api/v2/openapi.yaml
 
 🧪 Example Output
 🚨 SchemaWatch Report
@@ -84,6 +92,13 @@ SchemaWatch focuses on simplicity and CI-first workflows.
 | Setup time     | ⚡ 10 seconds       | ⏱️ Longer              |
 
 👉 SchemaWatch = quick setup + practical usage
+
+```md
+## ⚙️ GitHub Actions Example
+
+```yaml
+- name: Check API breaking changes
+  run: schemawatch openapi_old.yaml openapi.yaml
 
 🛠 Roadmap
 Request body change detection
