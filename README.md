@@ -174,7 +174,19 @@ Automatically comments on pull requests:
 - [ ] Web dashboard
 
 ---
+## 🤖 AI-Powered Explanations (Experimental)
 
+SchemaWatch can use Gemma 4 to explain breaking changes in plain English.
+
+```bash
+python gemma_explainer.py
+```
+
+Requires a Google AI Studio API key:
+
+1. Get your free API key from [Google AI Studio](https://aistudio.google.com)
+2. Create a `.env` file: `GEMINI_API_KEY=your_key_here`
+3. Run: `python gemma_explainer.py`
 ## 🤝 Contributing
 
 Contributions are welcome!
