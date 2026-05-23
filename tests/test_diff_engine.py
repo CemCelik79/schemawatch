@@ -256,3 +256,208 @@ def test_nested_object_field_removed():
     messages = get_messages(changes)
 
     assert isinstance(messages, list)
+
+
+def test_request_body_removed():
+    old_schema = {
+        "paths": {
+            "/items": {
+                "post": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+    new_schema = {
+        "paths": {"/items": {"post": {}}},
+        "components": {"schemas": {}},
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    assert "Request body removed: POST /items" in messages
+
+
+def test_request_body_became_required():
+    old_schema = {
+        "paths": {
+            "/items": {
+                "post": {
+                    "requestBody": {
+                        "required": False,
+                        "content": {
+                            "application/json": {
+                                "schema": {"type": "object", "properties": {}},
+                            }
+                        },
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+    new_schema = {
+        "paths": {
+            "/items": {
+                "post": {
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {"type": "object", "properties": {}},
+                            }
+                        },
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    assert "Request body became required: POST /items" in messages
+
+
+def test_request_body_field_removed_and_type_changed():
+    old_schema = {
+        "paths": {
+            "/items": {
+                "post": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {"type": "integer"},
+                                        "name": {"type": "string"},
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+    new_schema = {
+        "paths": {
+            "/items": {
+                "post": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {"type": "string"},
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    assert "Request body field removed: POST /items.name" in messages
+    assert "Request body field type changed: POST /items.id integer -> string" in messages
+
+
+def test_response_status_removed():
+    old_schema = {
+        "paths": {
+            "/x": {
+                "get": {
+                    "responses": {
+                        "200": {"description": "ok"},
+                        "404": {"description": "not found"},
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+    new_schema = {
+        "paths": {
+            "/x": {
+                "get": {
+                    "responses": {
+                        "404": {"description": "not found"},
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    assert "Response status code removed: 200 GET /x" in messages
+
+
+def test_response_body_field_removed():
+    old_schema = {
+        "paths": {
+            "/x": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "email": {"type": "string"},
+                                        },
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+    new_schema = {
+        "paths": {
+            "/x": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                        },
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    assert "Response body field removed: GET /x 200.email" in messages
