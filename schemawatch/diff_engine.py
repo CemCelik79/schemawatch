@@ -130,8 +130,152 @@ def compare_paths(old_schema, new_schema):
     return changes
 
 
+HTTP_METHODS = frozenset(
+    {"get", "post", "put", "patch", "delete", "head", "options", "trace"}
+)
+
+
+def _is_http_method(key: str) -> bool:
+    return key.lower() in HTTP_METHODS
+
+
+def _get_content_schema(part: Dict[str, Any]) -> Dict[str, Any]:
+    content = part.get("content") or {}
+    if not content:
+        return {}
+    if "application/json" in content:
+        return content["application/json"].get("schema") or {}
+    first = next(iter(content.values()), {})
+    return first.get("schema") or {}
+
+
+def _operation_label(method: str, path: str) -> str:
+    return f"{method.upper()} {path}"
+
+
+def _diff_body_properties(
+    context: str,
+    label: str,
+    old_schema: Dict[str, Any],
+    new_schema: Dict[str, Any],
+) -> List:
+    changes: List = []
+    old_props = old_schema.get("properties") or {}
+    new_props = new_schema.get("properties") or {}
+
+    if context == "request":
+        removed_prefix = "Request body field removed"
+        type_prefix = "Request body field type changed"
+    else:
+        removed_prefix = "Response body field removed"
+        type_prefix = "Response body field type changed"
+
+    old_fields = set(old_props.keys())
+    new_fields = set(new_props.keys())
+
+    for field in old_fields - new_fields:
+        changes.append(
+            make_change(f"{removed_prefix}: {label}.{field}", "warning")
+        )
+
+    for field in old_fields & new_fields:
+        old_field = old_props[field]
+        new_field = new_props[field]
+        old_type = get_type_repr(old_field)
+        new_type = get_type_repr(new_field)
+        if old_type != new_type:
+            changes.append(
+                make_change(
+                    f"{type_prefix}: {label}.{field} {old_type} -> {new_type}",
+                    "warning",
+                )
+            )
+        if (
+            old_field.get("type") == "object"
+            and new_field.get("type") == "object"
+        ):
+            changes.extend(
+                _diff_body_properties(
+                    context,
+                    f"{label}.{field}",
+                    old_field,
+                    new_field,
+                )
+            )
+
+    return changes
+
+
+def compare_operations(old_schema, new_schema):
+    changes: List = []
+    old_paths = old_schema.get("paths") or {}
+    new_paths = new_schema.get("paths") or {}
+
+    for path in set(old_paths) & set(new_paths):
+        old_item = old_paths[path]
+        new_item = new_paths[path]
+        old_methods = {m for m in old_item if _is_http_method(m)}
+        new_methods = {m for m in new_item if _is_http_method(m)}
+
+        for method in old_methods & new_methods:
+            old_op = old_item[method]
+            new_op = new_item[method]
+            op_label = _operation_label(method, path)
+
+            old_rb = old_op.get("requestBody")
+            new_rb = new_op.get("requestBody")
+
+            if old_rb and not new_rb:
+                changes.append(
+                    make_change(f"Request body removed: {op_label}", "critical")
+                )
+            elif old_rb and new_rb:
+                if not old_rb.get("required", False) and new_rb.get("required", False):
+                    changes.append(
+                        make_change(
+                            f"Request body became required: {op_label}",
+                            "warning",
+                        )
+                    )
+                changes.extend(
+                    _diff_body_properties(
+                        "request",
+                        op_label,
+                        _get_content_schema(old_rb),
+                        _get_content_schema(new_rb),
+                    )
+                )
+
+            old_responses = old_op.get("responses") or {}
+            new_responses = new_op.get("responses") or {}
+
+            for status in set(old_responses) - set(new_responses):
+                changes.append(
+                    make_change(
+                        f"Response status code removed: {status} {op_label}",
+                        "critical",
+                    )
+                )
+
+            for status in set(old_responses) & set(new_responses):
+                old_resp = old_responses[status]
+                new_resp = new_responses[status]
+                resp_label = f"{op_label} {status}"
+                changes.extend(
+                    _diff_body_properties(
+                        "response",
+                        resp_label,
+                        _get_content_schema(old_resp),
+                        _get_content_schema(new_resp),
+                    )
+                )
+
+    return changes
+
+
 def detect_breaking_changes(old_schema, new_schema):
     changes = []
     changes.extend(compare_paths(old_schema, new_schema))
+    changes.extend(compare_operations(old_schema, new_schema))
     changes.extend(compare_schemas(old_schema, new_schema))
     return changes
