@@ -4,17 +4,27 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "publish" to confirm manual PyPI upload'
+        required: true
+
+concurrency:
+  group: pypi-publish-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630cea9ddb9b8250add8861fc # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@4237ab43a313034440161af4b77bdf08aa494704 # v5.4.0
         with:
           python-version: "3.11"
           cache: pip
@@ -28,21 +38,22 @@ jobs:
         run: python -m build
 
       - name: Upload distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@654628c736aef172e052bc15bcd8dadbb3c063b # v4.6.0
         with:
           name: dist-files
           path: dist/
 
   publish:
     needs: build
+    if: github.event_name == 'release' || github.event.inputs.confirm == 'publish'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      id-token: write   # 🔥 EN KRİTİK SATIR
+      id-token: write
 
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a84ed08fc486741adbeb67e292dd5635355 # v4.1.8
         with:
           name: dist-files
           path: dist/

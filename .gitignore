@@ -19,4 +19,13 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Secrets / local credentials
 .env
+.env.*
+!.env.example
+.pypirc
+*.pem
+
+# Local release notes drafts
+.release-notes-*.md
