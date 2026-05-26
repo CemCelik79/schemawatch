@@ -45,6 +45,7 @@ SchemaWatch detects:
 - Fields that became required
 - Enum value changes
 - Array item type changes
+- `$ref` resolution for `components.schemas` and request/response bodies
 
 ---
 
@@ -167,10 +168,12 @@ Automatically comments on pull requests:
 
 ## 🛠 Roadmap
 
-- [ ] Request body change detection
-- [ ] Response status code comparison
-- [ ] Nested object comparison improvements
-- [ ] Markdown / HTML output
+- [x] Request body change detection
+- [x] Response status code comparison
+- [x] `$ref` resolution (`#/components/...` internal pointers)
+- [ ] Nested object comparison improvements (`allOf` / `oneOf`, external file refs)
+- [x] Markdown output (`--format markdown`)
+- [ ] HTML output
 - [ ] Web dashboard
 
 ---
