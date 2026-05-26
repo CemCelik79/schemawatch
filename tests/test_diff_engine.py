@@ -1,4 +1,4 @@
-from schemawatch.diff_engine import detect_breaking_changes
+from schemawatch.diff_engine import detect_breaking_changes, resolve_schema
 
 
 def get_messages(changes):
@@ -461,3 +461,118 @@ def test_response_body_field_removed():
 
     messages = get_messages(detect_breaking_changes(old_schema, new_schema))
     assert "Response body field removed: GET /x 200.email" in messages
+
+
+def test_resolve_schema_internal_ref():
+    doc = {
+        "components": {
+            "schemas": {
+                "User": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}},
+                }
+            }
+        }
+    }
+    resolved = resolve_schema(doc, {"$ref": "#/components/schemas/User"})
+    assert resolved.get("type") == "object"
+    assert "id" in resolved.get("properties", {})
+
+
+def test_request_body_ref_to_components():
+    old_schema = {
+        "paths": {
+            "/users": {
+                "post": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UserInput"}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "schemas": {
+                "UserInput": {
+                    "type": "object",
+                    "properties": {
+                        "email": {"type": "string"},
+                        "name": {"type": "string"},
+                    },
+                }
+            }
+        },
+    }
+    new_schema = {
+        "paths": {
+            "/users": {
+                "post": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/UserInput"}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "schemas": {
+                "UserInput": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                    },
+                }
+            }
+        },
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    assert "Request body field removed: POST /users.email" in messages
+
+
+def test_component_schema_property_ref():
+    old_schema = {
+        "paths": {},
+        "components": {
+            "schemas": {
+                "Order": {
+                    "type": "object",
+                    "properties": {
+                        "customer": {"$ref": "#/components/schemas/Customer"},
+                    },
+                },
+                "Customer": {
+                    "type": "object",
+                    "properties": {
+                        "email": {"type": "string"},
+                    },
+                },
+            }
+        },
+    }
+    new_schema = {
+        "paths": {},
+        "components": {
+            "schemas": {
+                "Order": {
+                    "type": "object",
+                    "properties": {
+                        "customer": {"$ref": "#/components/schemas/Customer"},
+                    },
+                },
+                "Customer": {
+                    "type": "object",
+                    "properties": {},
+                },
+            }
+        },
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    assert "Response field removed: Customer.email" in messages
