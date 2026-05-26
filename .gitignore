@@ -29,3 +29,4 @@ Thumbs.db
 
 # Local release notes drafts
 .release-notes-*.md
+RELEASE_NOTES_*.md
