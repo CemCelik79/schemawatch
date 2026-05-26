@@ -21,10 +21,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630cea9ddb9b8250add8861fc # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@4237ab43a313034440161af4b77bdf08aa494704 # v5.4.0
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.11"
           cache: pip
@@ -38,7 +38,7 @@ jobs:
         run: python -m build
 
       - name: Upload distributions
-        uses: actions/upload-artifact@654628c736aef172e052bc15bcd8dadbb3c063b # v4.6.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: dist-files
           path: dist/
@@ -53,7 +53,7 @@ jobs:
 
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@d3f86a84ed08fc486741adbeb67e292dd5635355 # v4.1.8
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: dist-files
           path: dist/
