@@ -199,6 +199,7 @@ Requires a Google AI Studio API key:
 1. Get your free API key from [Google AI Studio](https://aistudio.google.com)
 2. Create a `.env` file: `GEMINI_API_KEY=your_key_here`
 3. Run: `python gemma_explainer.py`
+
 ## 🤝 Contributing
 
 Contributions are welcome!
@@ -207,6 +208,14 @@ Contributions are welcome!
 2. Create a feature branch
 3. Commit your changes
 4. Open a pull request
+
+---
+
+## 💬 Feedback
+
+Found a bug or want a feature?
+[Open an issue](https://github.com/CemCelik79/schemawatch/issues/new) —
+even a one-liner helps.
 
 ---
 
