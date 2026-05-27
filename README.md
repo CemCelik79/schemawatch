@@ -47,6 +47,15 @@ SchemaWatch detects:
 - Array item type changes
 - `$ref` resolution for `components.schemas` and request/response bodies
 
+### How reporting works
+
+SchemaWatch checks breaking changes at two levels:
+
+1. **Component schemas** (`components.schemas`) — e.g. `Response field removed: User.email`
+2. **Operations** (per path/method) — e.g. request body removed, response status removed
+
+When a request or response body is **only** a `$ref` to a component schema (e.g. `#/components/schemas/User`), field-level changes are reported **once** at the schema level, not again as `Response body field removed: GET /users 200.email`. Inline body schemas (no `$ref`) are still reported at the operation level.
+
 ---
 
 ## 📦 Installation
