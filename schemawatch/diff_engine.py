@@ -181,6 +181,30 @@ def _schema_name_from_ref(ref: str) -> Optional[str]:
     return None
 
 
+def _is_pure_components_schema_ref(schema: Dict[str, Any]) -> bool:
+    """True when body/response schema is only a pointer into components.schemas."""
+    if not schema:
+        return False
+    ref = schema.get("$ref")
+    return bool(
+        ref
+        and ref.startswith("#/components/schemas/")
+        and len(schema) == 1
+    )
+
+
+def _skip_body_property_diff(
+    old_content: Dict[str, Any], new_content: Dict[str, Any]
+) -> bool:
+    """
+    Skip operation-level field diffs when both sides only reference
+    components.schemas; compare_schemas already reports those changes.
+    """
+    return _is_pure_components_schema_ref(
+        old_content
+    ) and _is_pure_components_schema_ref(new_content)
+
+
 def compare_schemas(old_schema, new_schema):
     changes = []
 
@@ -347,16 +371,19 @@ def compare_operations(old_schema, new_schema):
                             "warning",
                         )
                     )
-                changes.extend(
-                    _diff_body_properties(
-                        "request",
-                        op_label,
-                        _get_content_schema(old_rb),
-                        _get_content_schema(new_rb),
-                        old_schema,
-                        new_schema,
+                old_body = _get_content_schema(old_rb)
+                new_body = _get_content_schema(new_rb)
+                if not _skip_body_property_diff(old_body, new_body):
+                    changes.extend(
+                        _diff_body_properties(
+                            "request",
+                            op_label,
+                            old_body,
+                            new_body,
+                            old_schema,
+                            new_schema,
+                        )
                     )
-                )
 
             old_responses = old_op.get("responses") or {}
             new_responses = new_op.get("responses") or {}
@@ -373,16 +400,19 @@ def compare_operations(old_schema, new_schema):
                 old_resp = old_responses[status]
                 new_resp = new_responses[status]
                 resp_label = f"{op_label} {status}"
-                changes.extend(
-                    _diff_body_properties(
-                        "response",
-                        resp_label,
-                        _get_content_schema(old_resp),
-                        _get_content_schema(new_resp),
-                        old_schema,
-                        new_schema,
+                old_body = _get_content_schema(old_resp)
+                new_body = _get_content_schema(new_resp)
+                if not _skip_body_property_diff(old_body, new_body):
+                    changes.extend(
+                        _diff_body_properties(
+                            "response",
+                            resp_label,
+                            old_body,
+                            new_body,
+                            old_schema,
+                            new_schema,
+                        )
                     )
-                )
 
     return changes
 
