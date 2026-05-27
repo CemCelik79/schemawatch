@@ -533,7 +533,8 @@ def test_request_body_ref_to_components():
     }
 
     messages = get_messages(detect_breaking_changes(old_schema, new_schema))
-    assert "Request body field removed: POST /users.email" in messages
+    assert "Response field removed: UserInput.email" in messages
+    assert not any("Request body field removed" in m for m in messages)
 
 
 def test_component_schema_property_ref():
@@ -576,3 +577,117 @@ def test_component_schema_property_ref():
 
     messages = get_messages(detect_breaking_changes(old_schema, new_schema))
     assert "Response field removed: Customer.email" in messages
+
+
+def test_no_duplicate_when_response_uses_component_ref():
+    """Field changes on a shared schema should not appear twice (schema + response body)."""
+    old_schema = {
+        "paths": {
+            "/users": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/User"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "schemas": {
+                "User": {
+                    "type": "object",
+                    "properties": {
+                        "email": {"type": "string"},
+                        "name": {"type": "string"},
+                    },
+                }
+            }
+        },
+    }
+    new_schema = {
+        "paths": {
+            "/users": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/User"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "schemas": {
+                "User": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                    },
+                }
+            }
+        },
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    email_messages = [m for m in messages if "email" in m]
+    assert len(email_messages) == 1
+    assert "Response field removed: User.email" in messages
+    assert not any("Response body field removed" in m and "email" in m for m in messages)
+
+
+def test_inline_response_body_still_reported():
+    """Inline response schemas are not deduplicated against components."""
+    old_schema = {
+        "paths": {
+            "/x": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {"token": {"type": "string"}},
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+    new_schema = {
+        "paths": {
+            "/x": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {},
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {"schemas": {}},
+    }
+
+    messages = get_messages(detect_breaking_changes(old_schema, new_schema))
+    assert "Response body field removed: GET /x 200.token" in messages
